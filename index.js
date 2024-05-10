@@ -9,9 +9,9 @@ const port = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
-// const uri = "mongodb://localhost:27017";
+const uri = "mongodb://localhost:27017";
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.6fu63x8.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.6fu63x8.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -28,7 +28,9 @@ async function run() {
     await client.connect();
 
     const servicesCollection = client.db("carDoctor").collection("services");
+    const bookingsCollection = client.db("carDoctor").collection("bookings");
 
+    // services
     app.get("/services", async (req, res) => {
       const result = await servicesCollection.find().toArray();
       res.send(result);
@@ -40,6 +42,12 @@ async function run() {
         projection: { title: 1, price: 1, service_id: 1 },
       };
       const result = await servicesCollection.findOne(query, options);
+      res.send(result);
+    });
+
+    // bookings
+    app.post("/bookings", async (req, res) => {
+      const result = await bookingsCollection.insertOne(req.body);
       res.send(result);
     });
 
