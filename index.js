@@ -67,7 +67,7 @@ async function run() {
     app.post("/jwt", async (req, res) => {
       const user = req.body;
       // console.log(user);
-      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, { expiresIn: "1s" });
       res
         .cookie("token", token, {
           httpOnly: true,
@@ -75,6 +75,12 @@ async function run() {
           secure: process.env.NODE_ENV === "production" ? true : false,
         })
         .send({ success: true });
+    });
+
+    app.post("/logout", async (req, res) => {
+      const user = req.body;
+      console.log(`logging out: ${user}`);
+      res.clearCookie("token", { maxAge: 0 }).send({ success: true });
     });
 
     // services
