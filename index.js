@@ -1,13 +1,21 @@
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
 
 // middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
+    credentials: true,
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
 
 const uri = "mongodb://localhost:27017";
 
@@ -29,6 +37,20 @@ async function run() {
 
     const servicesCollection = client.db("carDoctor").collection("services");
     const bookingsCollection = client.db("carDoctor").collection("bookings");
+
+    // auth
+    app.post("/jwt", async (req, res) => {
+      const user = req.body;
+      // console.log(user);
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET);
+      res
+        .cookie("token", token, {
+          httpOnly: true,
+          sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+          secure: process.env.NODE_ENV === "production" ? true : false,
+        })
+        .send({ success: true });
+    });
 
     // services
     app.get("/services", async (req, res) => {
@@ -52,6 +74,7 @@ async function run() {
     });
 
     app.get("/bookings", async (req, res) => {
+      console.log("token", req.cookies.token);
       const email = req?.query?.email;
       let query = {};
       if (email) {
