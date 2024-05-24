@@ -7,7 +7,7 @@ require("dotenv").config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-// middleware
+// middlewares
 app.use(
   cors({
     origin: ["http://localhost:5173"],
@@ -16,6 +16,31 @@ app.use(
 );
 app.use(express.json());
 app.use(cookieParser());
+
+// custom middlewares
+const logger = async (req, res, next) => {
+  console.log("called:", req.host, req.originalUrl);
+  next();
+};
+
+const verifyToken = async (req, res, next) => {
+  const token = req.cookies?.token;
+  console.log("token inside verifyToken middleware: ", token);
+  if (!token) {
+    return res.status(401).send({ message: "Unauthorized" });
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    // error
+    if (err) {
+      console.log(err);
+      return res.status(401).send({ message: "Unauthorized" });
+    }
+    // if token is valid then it would be decoded
+    console.log("value of decoded", decoded);
+    req.user = decoded;
+    next();
+  });
+};
 
 const uri = "mongodb://localhost:27017";
 
@@ -53,7 +78,7 @@ async function run() {
     });
 
     // services
-    app.get("/services", async (req, res) => {
+    app.get("/services", logger, async (req, res) => {
       const result = await servicesCollection.find().toArray();
       res.send(result);
     });
@@ -73,8 +98,12 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/bookings", async (req, res) => {
-      console.log("token", req.cookies.token);
+    app.get("/bookings", logger, verifyToken, async (req, res) => {
+      // console.log("token", req.cookies.token);
+      console.log("user in the valid token:", req.user);
+      if (req.query.email !== req.user.email) {
+        return res.status(403).send({ message: "Forbidden access" });
+      }
       const email = req?.query?.email;
       let query = {};
       if (email) {
